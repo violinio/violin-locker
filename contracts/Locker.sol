@@ -12,7 +12,6 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 /**
  * @title Violin's locker contract
  * @notice The locker contract allows project admins to lock LP tokens for a period
- * @notice The owner can only change the token name
  * @author Muse
  */
 contract Locker is ERC721, Ownable, ReentrancyGuard {
@@ -30,22 +29,22 @@ contract Locker is ERC721, Ownable, ReentrancyGuard {
         uint256 amount;
         /// @notice The amount of tokens still available for withdrawal
         uint256 amountRemaining;
-        /// @notice The unix timestamp in seconds for withdrawal
+        /// @notice The unix timestamp in seconds after which withdrawing the tokens is allowed
         uint256 unlockTimestamp;
         /// @notice The address of the holding contract if any, otherwise address(0)
         address holdingContract;
-        /// @notice Indicates that the Locker governance (owner) can disable the timelock (unlockTimestamp) on this lock.
+        /// @notice Indicates that the Locker governance (operator) can disable the timelock (unlockTimestamp) on this lock.
         /// @notice This could be useful in case the lock owner is scared about deployment issues for example.
         bool unlockableByGovernance;
-        /// @notice Indicates whether the Locker governance (owner) has unlocked this lock for early withdrawal.
-        /// @notice Can only be set to true by Locker governance (owner) if unlockableByGovernance is set to true.
+        /// @notice Indicates whether the Locker governance (operator) has unlocked this lock for early withdrawal by the lock owner.
+        /// @notice Can only be set to true by Locker governance (operator) if unlockableByGovernance is set to true.
         bool unlockedByGovernance;
     }
 
     /// @notice The operator can disable the unlockTimestamp (make a lock withdrawable) if the lock creator permits this.
     address public operator;
 
-    /// @notice An incremental token that stores the latest lockId (zero means no locks yet).
+    /// @notice An incremental counter that stores the latest lockId (zero means no locks yet).
     Counters.Counter private lockIdCounter;
 
     /// @notice The list of all locks ever created, the key represents the lockId.
@@ -59,7 +58,7 @@ contract Locker is ERC721, Ownable, ReentrancyGuard {
     event LockCreated(
         uint256 indexed lockId,
         address indexed token,
-        address indexed user,
+        address indexed creator,
         uint256 amount
     );
 
@@ -93,7 +92,7 @@ contract Locker is ERC721, Ownable, ReentrancyGuard {
      * @param amount The amount of tokens to transfer in
      * @param unlockTimestamp The timestamp from which withdrawals become possible
      * @param withHoldingContract Whether the funds should be stored in a secure holding contract or in the Locker itself (the latter saves gas)
-     * @param unlockableByGovernance Indicates whether the Locker owner should be able to unlock
+     * @param unlockableByGovernance Indicates whether the Locker operator should be able to unlock
      */
     function createLock(
         IERC20 token,
@@ -105,7 +104,6 @@ contract Locker is ERC721, Ownable, ReentrancyGuard {
         require(amount > 0, "zero amount");
         require(unlockTimestamp > block.timestamp, "time passed");
         require(unlockTimestamp < 10000000000 || unlockTimestamp == type(uint256).max, "too far away");
-        token.balanceOf(address(this)); // Basic validation on the token
 
         lockIdCounter.increment();
         uint256 lockId = lockIdCounter.current();
@@ -211,7 +209,7 @@ contract Locker is ERC721, Ownable, ReentrancyGuard {
 
     //* VIEW FUNCTIONS *//
 
-    /// @notice returns whether the lockId is valid
+    /// @notice returns whether the lockId exists (is created)
     function isValidLock(uint256 lockId) public view returns (bool) {
         return lockId != 0 && lockId <= lockIdCounter.current();
     }
@@ -219,6 +217,7 @@ contract Locker is ERC721, Ownable, ReentrancyGuard {
     /**
      * @notice Returns information about a specific Lock.
      * @dev The lock data should be indexed using TheGraph or similar to ensure users can always easily find their lockIds.
+     * @dev Reverts in case the lockId is out of range.
      * @return The lock related to the lockId.
      */
     function getLock(uint256 lockId) external view returns (Lock memory) {
@@ -229,11 +228,10 @@ contract Locker is ERC721, Ownable, ReentrancyGuard {
 
     /**
      * @notice Gets the incremental id of the most recent lock. The first lock is at id 1.
-     * @dev Reverts in case there are no locks yet.
+     * @dev A lastLockId of zero means there are no locks yet!
      * @return The id of the latest lock.
      */
-    function lastLockId() public view returns (uint256) {
-        require(lockIdCounter.current() > 0, "no locks");
+    function lastLockId() external view returns (uint256) {
         return lockIdCounter.current();
     }
 
@@ -270,7 +268,7 @@ contract Locker is ERC721, Ownable, ReentrancyGuard {
         require(isValidLock(lockId), "invalid lock");
         Lock storage lock = locks[lockId];
         require(lock.unlockableByGovernance, "not allowed to unlock");
-        require(lock.unlockedByGovernance != unlocked, "already unlocked");
+        require(lock.unlockedByGovernance != unlocked, "already set");
 
         lock.unlockedByGovernance = unlocked;
 
@@ -293,12 +291,12 @@ contract Locker is ERC721, Ownable, ReentrancyGuard {
 
     //* OTHERS *//
 
-    /// @notice Override the token name in case of rebranding.
+    /// @notice Override the token name to allow for rebranding.
     function name() public view override returns (string memory) {
         return tokenName;
     }
 
-    /// @notice Override the token symbol in case of rebranding.
+    /// @notice Override the token symbol to allow for rebranding.
     function symbol() public view override returns (string memory) {
         return tokenSymbol;
     }
@@ -313,14 +311,14 @@ contract Locker is ERC721, Ownable, ReentrancyGuard {
 }
 
 /**
- * @title Violin's HoldingContract to manage individual locked positions.
+ * @title Violin's HoldingContract to manage individually locked positions.
  * @notice The HoldingContract stores an individually locked position, it can only be unlocked by the main locker address, which should be a Violin locker.
  * @author Muse
  */
 contract HoldingContract {
     using SafeERC20 for IERC20;
 
-    /// @notice The locker contract whiBut I guess there's an argument ch contains the actual information of the lock and is the only address that can unlock funds.
+    /// @notice The locker contract contains the actual information of the lock and is the only address that can unlock funds.
     address public immutable locker;
 
     constructor() {
