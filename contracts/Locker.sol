@@ -27,8 +27,8 @@ contract Locker is ERC721, Ownable, ReentrancyGuard {
         address creator;
         /// @notice The amount of tokens initially locked
         uint256 amount;
-        /// @notice The amount of tokens still available for withdrawal
-        uint256 amountRemaining;
+        /// @notice Whether this Lock is still claimable, true from creation until withdrawal.
+        bool unclaimed;
         /// @notice The unix timestamp in seconds after which withdrawing the tokens is allowed
         uint256 unlockTimestamp;
         /// @notice The address of the holding contract if any, otherwise address(0)
@@ -129,7 +129,7 @@ contract Locker is ERC721, Ownable, ReentrancyGuard {
             token: token,
             creator: msg.sender,
             amount: amount,
-            amountRemaining: amount,
+            unclaimed: true,
             unlockTimestamp: unlockTimestamp,
             holdingContract: holdingContract,
             unlockableByGovernance: unlockableByGovernance,
@@ -150,7 +150,7 @@ contract Locker is ERC721, Ownable, ReentrancyGuard {
      * @param lockId The id of the locked position
      * @param amount The amount of tokens to withdraw from the locked position
      */
-    function withdraw(uint256 lockId, uint256 amount) external nonReentrant {
+    function withdraw(uint256 lockId) external nonReentrant {
         require(isValidLock(lockId), "invalid lock id");
         require(ownerOf(lockId) == msg.sender, "not owner of lock share token");
 
@@ -160,18 +160,19 @@ contract Locker is ERC721, Ownable, ReentrancyGuard {
                 lock.unlockedByGovernance,
             "still locked"
         );
-        require(lock.amountRemaining >= amount, "amount too large");
+        require(lock.unclaimed, "already claimed");
 
-        // Decrease lock amount
-        lock.amountRemaining -= amount;
-        if (lock.amountRemaining == 0) {
-            _burn(lockId);
-        }
-
+        // Mark lock as claimed and burn ownership token
+        lock.unclaimed = false;
+        _burn(lockId);
+        
+        uint256 amount = lock.amount;
         // Transfer out tokens to sender
         if (lock.holdingContract == address(0)) {
+            amount = min(amount, lock.token.balanceOf(address(this)));
             lock.token.safeTransfer(msg.sender, amount);
         } else {
+            amount = min(amount, lock.token.balanceOf(lock.holdingContract));
             HoldingContract(lock.holdingContract).transferTo(
                 lock.token,
                 msg.sender,
@@ -307,6 +308,10 @@ contract Locker is ERC721, Ownable, ReentrancyGuard {
         returns (bool)
     {
         return keccak256(abi.encodePacked(a)) == keccak256(abi.encodePacked(b));
+    }
+
+    function min(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a < b ? a : b; 
     }
 }
 
