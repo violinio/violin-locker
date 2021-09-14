@@ -152,7 +152,6 @@ contract Locker is ERC721, Ownable, ReentrancyGuard {
      */
     function withdraw(uint256 lockId) external nonReentrant {
         require(isValidLock(lockId), "invalid lock id");
-        require(ownerOf(lockId) == msg.sender, "not owner of lock share token");
 
         Lock storage lock = locks[lockId];
         require(
@@ -161,6 +160,7 @@ contract Locker is ERC721, Ownable, ReentrancyGuard {
             "still locked"
         );
         require(lock.unclaimed, "already claimed");
+        require(ownerOf(lockId) == msg.sender, "not owner of lock share token");
 
         // Mark lock as claimed and burn ownership token
         lock.unclaimed = false;
