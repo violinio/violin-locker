@@ -1,5 +1,6 @@
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-etherscan");
+require("hardhat-deploy");
 require("hardhat-contract-sizer");
 require("solidity-coverage");
 require("dotenv").config();
@@ -17,6 +18,9 @@ module.exports = {
         runs: 100,
       },
     },
+  },
+  namedAccounts: {
+    deployer: 0,
   },
   networks: {
     hardhat: {},
@@ -50,6 +54,10 @@ module.exports = {
     },
     xdai: {
       url: "https://rpc.xdaichain.com/",
+      accounts: [`0x${PRIVATE_KEY}`],
+    },
+    harmony: {
+      url: "https://api.harmony.one",
       accounts: [`0x${PRIVATE_KEY}`],
     },
     moonriver: {
