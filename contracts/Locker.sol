@@ -148,7 +148,6 @@ contract Locker is ERC721, Ownable, ReentrancyGuard {
      * @notice Once the remaining amount reaches zero, the NFT is burned.
      * @notice The ownership share is therefore not fractional as it would complicate things for the user.
      * @param lockId The id of the locked position
-     * @param amount The amount of tokens to withdraw from the locked position
      */
     function withdraw(uint256 lockId) external nonReentrant {
         require(isValidLock(lockId), "invalid lock id");
