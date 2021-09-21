@@ -1,6 +1,5 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
-const { FakeContract, smock } = require("@defi-wonderland/smock");
 const { BigNumber } = require("ethers");
 
 describe("Locker testing", function () {
