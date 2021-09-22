@@ -36,7 +36,7 @@ module.exports = {
       url: "https://api.avax.network/ext/bc/C/rpc",
       accounts: [`0x${PRIVATE_KEY}`],
     },
-    fantom: {
+    ftm: {
       url: "https://rpc.ftm.tools/",
       accounts: [`0x${PRIVATE_KEY}`],
     },

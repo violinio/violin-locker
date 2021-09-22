@@ -1,7 +1,7 @@
 
 
 const delay = ms => new Promise(res => setTimeout(res, ms));
-const etherscanChains = ["poly", "bsc", "poly_mumbai"];
+const etherscanChains = ["poly", "bsc", "poly_mumbai", "ftm", "arbitrum"];
 const sourcifyChains = ["xdai", "celo", "avax", "avax_fuji", "arbitrum"];
 
 const main = async function (hre) {
