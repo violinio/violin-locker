@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.4;
+pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -117,8 +117,8 @@ contract Locker is ERC721, Ownable, ReentrancyGuard {
         token.safeTransferFrom(msg.sender, holdingContract, amount);
         amount = token.balanceOf(holdingContract) - balanceBefore;
 
-        // It is impossible for the lock to already be created, we assert it defensively nonetheless.
-        assert(locks[lockId].creator == address(0));
+        // It is practically impossible for the lock to already be created, since theoretically counter could eventually overflow we use require in favor of assert.
+        require(locks[lockId].creator == address(0), "already exists");
 
         locks[lockId] = Lock({
             lockId: lockId,
@@ -149,6 +149,9 @@ contract Locker is ERC721, Ownable, ReentrancyGuard {
         require(isValidLock(lockId), "invalid lock id");
 
         Lock storage lock = locks[lockId];
+        IERC20 token = lock.token;
+        address holdingContract = lock.holdingContract;
+
         require(
             block.timestamp >= lock.unlockTimestamp ||
                 lock.unlockedByGovernance,
@@ -164,10 +167,10 @@ contract Locker is ERC721, Ownable, ReentrancyGuard {
         uint256 amount = lock.amount;
         // Transfer out tokens to sender
 
-        HoldingContract(lock.holdingContract).transferTo(
-            lock.token,
+        HoldingContract(holdingContract).transferTo(
+            token,
             msg.sender,
-            lock.token.balanceOf(lock.holdingContract)
+            token.balanceOf(holdingContract)
         );
 
         emit Withdraw(lockId, address(lock.token), msg.sender, amount);
@@ -181,7 +184,7 @@ contract Locker is ERC721, Ownable, ReentrancyGuard {
         require(isValidLock(lockId), "invalid lock id");
         require(ownerOf(lockId) == msg.sender, "not owner of lock share token");
         Lock storage lock = locks[lockId];
-        require(lock.unlockableByGovernance == true, "already not unlockable");
+        require(lock.unlockableByGovernance, "already not unlockable");
 
         lock.unlockableByGovernance = false;
         lock.unlockedByGovernance = false;
