@@ -91,35 +91,31 @@ contract Locker is ERC721, Ownable, ReentrancyGuard {
      * @param token The token to transfer in
      * @param amount The amount of tokens to transfer in
      * @param unlockTimestamp The timestamp from which withdrawals become possible
-     * @param withHoldingContract Whether the funds should be stored in a secure holding contract or in the Locker itself (the latter saves gas)
      * @param unlockableByGovernance Indicates whether the Locker operator should be able to unlock
      */
     function createLock(
         IERC20 token,
         uint256 amount,
         uint256 unlockTimestamp,
-        bool withHoldingContract,
         bool unlockableByGovernance
     ) external nonReentrant {
         require(amount > 0, "zero amount");
         require(unlockTimestamp > block.timestamp, "time passed");
-        require(unlockTimestamp < 10000000000 || unlockTimestamp == type(uint256).max, "too far away");
+        require(
+            unlockTimestamp < 10000000000 ||
+                unlockTimestamp == type(uint256).max,
+            "too far away"
+        );
 
         lockIdCounter.increment();
         uint256 lockId = lockIdCounter.current();
 
-        address holdingContract;
-        address recipient = address(this);
-
-        if (withHoldingContract) {
-            holdingContract = address(new HoldingContract());
-            recipient = holdingContract;
-        }
+        address holdingContract = address(new HoldingContract());
 
         // Before-after pattern is used to figure out the amount actually received, requires reentrancy guard.
-        uint256 balanceBefore = token.balanceOf(recipient);
-        token.safeTransferFrom(msg.sender, recipient, amount);
-        amount = token.balanceOf(recipient) - balanceBefore;
+        uint256 balanceBefore = token.balanceOf(holdingContract);
+        token.safeTransferFrom(msg.sender, holdingContract, amount);
+        amount = token.balanceOf(holdingContract) - balanceBefore;
 
         // It is impossible for the lock to already be created, we assert it defensively nonetheless.
         assert(locks[lockId].creator == address(0));
@@ -164,20 +160,15 @@ contract Locker is ERC721, Ownable, ReentrancyGuard {
         // Mark lock as claimed and burn ownership token
         lock.unclaimed = false;
         _burn(lockId);
-        
+
         uint256 amount = lock.amount;
         // Transfer out tokens to sender
-        if (lock.holdingContract == address(0)) {
-            amount = min(amount, lock.token.balanceOf(address(this)));
-            lock.token.safeTransfer(msg.sender, amount);
-        } else {
-            amount = min(amount, lock.token.balanceOf(lock.holdingContract));
-            HoldingContract(lock.holdingContract).transferTo(
-                lock.token,
-                msg.sender,
-                amount
-            );
-        }
+
+        HoldingContract(lock.holdingContract).transferTo(
+            lock.token,
+            msg.sender,
+            lock.token.balanceOf(lock.holdingContract)
+        );
 
         emit Withdraw(lockId, address(lock.token), msg.sender, amount);
     }
@@ -310,7 +301,7 @@ contract Locker is ERC721, Ownable, ReentrancyGuard {
     }
 
     function min(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a < b ? a : b; 
+        return a < b ? a : b;
     }
 }
 
