@@ -31,7 +31,7 @@ contract Locker is ERC721, Ownable, ReentrancyGuard {
         bool unclaimed;
         /// @notice The unix timestamp in seconds after which withdrawing the tokens is allowed
         uint256 unlockTimestamp;
-        /// @notice The address of the holding contract if any, otherwise address(0)
+        /// @notice The address of the holding contract
         address holdingContract;
         /// @notice Indicates that the Locker governance (operator) can disable the timelock (unlockTimestamp) on this lock.
         /// @notice This could be useful in case the lock owner is scared about deployment issues for example.
@@ -86,7 +86,7 @@ contract Locker is ERC721, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Creates a new lock by transferring 'amount' to the Locker or a newly created holding contract.
+     * @notice Creates a new lock by transferring 'amount' to a newly created holding contract.
      * @notice An NFT with the lockId is minted to the user. This NFT is transferrable and represents the ownership of the lock.
      * @param token The token to transfer in
      * @param amount The amount of tokens to transfer in
