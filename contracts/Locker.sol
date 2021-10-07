@@ -164,13 +164,13 @@ contract Locker is ERC721, Ownable, ReentrancyGuard {
         lock.unclaimed = false;
         _burn(lockId);
 
-        uint256 amount = lock.amount;
+        uint256 amount = token.balanceOf(holdingContract);
         // Transfer out tokens to sender
 
         HoldingContract(holdingContract).transferTo(
             token,
             msg.sender,
-            token.balanceOf(holdingContract)
+            amount
         );
 
         emit Withdraw(lockId, address(lock.token), msg.sender, amount);
