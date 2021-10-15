@@ -10,7 +10,7 @@ const main = async function (hre) {
     const { deployer } = await getNamedAccounts();
 
     // We get the contract to deploy
-    const locker = await deploy("Locker", { from: deployer, log: true, args: [] });
+    const locker = await deploy("Locker", { from: deployer, log: true, args: [], deterministicDeployment: true });
     console.log("Locker deployed to:", locker.address);
 
     const chain = hre.network.name;
