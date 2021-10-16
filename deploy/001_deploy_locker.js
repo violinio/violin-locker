@@ -10,7 +10,11 @@ const main = async function (hre) {
     const { deployer } = await getNamedAccounts();
 
     // We get the contract to deploy
-    const locker = await deploy("Locker", { from: deployer, log: true, args: [], deterministicDeployment: true });
+    const locker = await deploy("Locker", { 
+        from: deployer, 
+        log: true, 
+        args: [], 
+        deterministicDeployment: "0x9c22ff5f21f0b81b113e63f7db6da94fedef11b2119b4088b89664fb9a3cb658" });
     console.log("Locker deployed to:", locker.address);
 
     const chain = hre.network.name;
@@ -20,11 +24,11 @@ const main = async function (hre) {
 async function verify(hre, chain, contract) {
     const isEtherscanAPI = etherscanChains.includes(chain);
     const isSourcify = sourcifyChains.includes(chain);
-    if(!isEtherscanAPI && !isSourcify)
+    if (!isEtherscanAPI && !isSourcify)
         return;
 
     console.log('verifying...');
-    await delay(5000);
+    await delay(10000);
     if (isEtherscanAPI) {
         await hre.run("verify:verify", {
             address: contract,
