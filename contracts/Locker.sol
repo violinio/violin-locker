@@ -13,7 +13,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
  * @title Violin's locker contract
  * @notice The locker contract allows project admins to lock LP tokens for a period
  * @author Muse
- */
+ */ 
 contract Locker is ERC721Enumerable, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using Counters for Counters.Counter;
@@ -78,7 +78,9 @@ contract Locker is ERC721Enumerable, Ownable, ReentrancyGuard {
 
     event OperatorTransferred(address oldOperator, address newOperator);
 
-    constructor() ERC721(tokenName, tokenSymbol) {}
+    constructor(address initialOwner) ERC721(tokenName, tokenSymbol) {
+        transferOwnership(initialOwner);
+    }
 
     modifier onlyOperator() {
         require(msg.sender == operator, "only operator");

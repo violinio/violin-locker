@@ -13,15 +13,15 @@ const main = async function (hre) {
     const locker = await deploy("Locker", { 
         from: deployer, 
         log: true, 
-        args: [], 
+        args: [deployer], 
         deterministicDeployment: "0x9c22ff5f21f0b81b113e63f7db6da94fedef11b2119b4088b89664fb9a3cb658" });
     console.log("Locker deployed to:", locker.address);
 
     const chain = hre.network.name;
-    await verify(hre, chain, locker.address);
+    await verify(hre, chain, locker.address, deployer);
 }
 
-async function verify(hre, chain, contract) {
+async function verify(hre, chain, contract, owner) {
     const isEtherscanAPI = etherscanChains.includes(chain);
     const isSourcify = sourcifyChains.includes(chain);
     if (!isEtherscanAPI && !isSourcify)
@@ -33,14 +33,14 @@ async function verify(hre, chain, contract) {
         await hre.run("verify:verify", {
             address: contract,
             network: chain,
-            constructorArguments: []
+            constructorArguments: [owner]
         });
     } else if (isSourcify) {
         try {
             await hre.run("sourcify", {
                 address: contract,
                 network: chain,
-                constructorArguments: []
+                constructorArguments: [owner]
             });
         } catch (error) {
             console.log("verification failed: sourcify not supported?");
